@@ -21,6 +21,7 @@
         <!-- Header -->
         <header id="header" class="p-6 transition-colors rounded-t-lg">
             <h1 id="mode-display" class="text-3xl font-bold text-white">Tap to Start Work</h1>
+            <p id="local-time" class="text-white text-sm mt-2"></p>
         </header>
 
         <!-- Timer Display -->
@@ -34,6 +35,9 @@
             <div id="timer-card" class="text-center mb-6">
                 <p class="text-xl">Elapsed: <span id="elapsed-time" class="font-mono">00:00:00</span></p>
                 <p class="text-xl">Remaining: <span id="remaining-time" class="font-mono">N/A</span></p>
+                <div id="progress-bar-container" class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-4">
+                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
             </div>
 
             <!-- Action Buttons -->
@@ -73,6 +77,7 @@
         const ui = {
             header: document.getElementById('header'),
             modeDisplay: document.getElementById('mode-display'),
+            localTime: document.getElementById('local-time'),
             elapsedTime: document.getElementById('elapsed-time'),
             remainingTime: document.getElementById('remaining-time'),
             mainButton: document.getElementById('main-button'),
@@ -81,6 +86,8 @@
             secondHand: document.getElementById('second-hand'),
             sessionLog: document.getElementById('session-log'),
             resetButton: document.getElementById('reset-button'),
+            progressBarContainer: document.getElementById('progress-bar-container'),
+            progressBar: document.getElementById('progress-bar'),
         };
 
         const settings = {
@@ -94,6 +101,10 @@
                 work: 'bg-blue-500',
                 break: 'bg-green-500',
                 start: 'bg-blue-500',
+            },
+            progressBarColors: {
+                work: 'bg-blue-600',
+                break: 'bg-green-600',
             }
         };
 
@@ -133,9 +144,17 @@
                 const currentMinutes = Math.floor(state.elapsedSeconds / 60);
                 const newTotalMinutes = dailySummary.totalMinutes + currentMinutes;
                 ui.summaryDisplay.textContent = `Today: ${dailySummary.cycles} cycles, ${newTotalMinutes} min balanced`;
+                // Update progress bar for work mode (assuming a fixed work duration for progress visualization, e.g., 25 minutes)
+                const workDuration = 25 * 60; // 25 minutes in seconds
+                const progress = Math.min(100, (state.elapsedSeconds / workDuration) * 100);
+                ui.progressBar.style.width = `${progress}%`;
+                ui.progressBar.className = `h-2.5 rounded-full ${settings.progressBarColors.work}`;
             } else if (state.mode === 'break') {
                 const remaining = state.breakDuration * 1000 - elapsedMilliseconds;
                 ui.remainingTime.textContent = formatTime(remaining, true);
+                const progress = Math.min(100, (elapsedMilliseconds / (state.breakDuration * 1000)) * 100);
+                ui.progressBar.style.width = `${progress}%`;
+                ui.progressBar.className = `h-2.5 rounded-full ${settings.progressBarColors.break}`;
                 if (remaining <= 0) {
                     handleSessionEnd();
                 }
@@ -175,12 +194,14 @@
                 ui.remainingTime.textContent = 'N/A';
                 ui.mainButton.textContent = 'End Work, Start Break';
                 updateColors('work');
+                ui.progressBarContainer.classList.remove('hidden');
                 startTimer();
             } else if (newMode === 'break') {
                 state.mode = 'break';
                 ui.modeDisplay.textContent = 'BREAK';
                 ui.mainButton.textContent = 'End Break, Start Work';
                 updateColors('break');
+                ui.progressBarContainer.classList.remove('hidden');
                 startTimer();
             } else if (newMode === 'stopped') {
                 state.mode = 'stopped';
@@ -189,6 +210,7 @@
                 ui.mainButton.textContent = 'Start Work';
                 ui.pauseButton.classList.add('hidden');
                 updateColors('stopped');
+                ui.progressBarContainer.classList.add('hidden');
             }
         }
 
@@ -201,7 +223,18 @@
             } else {
                  ui.mainButton.className = `bg-green-500 text-white text-lg font-semibold py-4 px-10 rounded-lg shadow-md hover:bg-green-600 transition-all focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75`;
             }
+            // Reset progress bar when mode changes
+            ui.progressBar.style.width = '0%';
+            ui.progressBar.className = `h-2.5 rounded-full`; // Clear previous color
         }
+
+        function updateLocalTime() {
+            const now = new Date();
+            ui.localTime.textContent = now.toLocaleTimeString();
+        }
+
+        // Call updateLocalTime every second
+        setInterval(updateLocalTime, 1000);
 
         ui.mainButton.addEventListener('click', () => {
             if (state.mode === 'stopped') {
@@ -374,7 +407,9 @@
             if (state.mode === 'stopped') {
                 switchMode('stopped');
             }
+            ui.progressBarContainer.classList.add('hidden'); // Ensure hidden on initial load
             registerServiceWorker();
+            updateLocalTime(); // Initial call to display time immediately
         });
 
     </script>
