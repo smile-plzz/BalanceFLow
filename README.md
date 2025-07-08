@@ -5,12 +5,15 @@ A single-tap web app for balancing work and break cycles to enhance productivity
 ## Features
 
 - **Single-Tap Control**: Start and end work/break sessions with a single button.
-- **1:1 Work-Break Ratio**: Break time is automatically set to match the duration of the preceding work session.
+- **Customizable Durations**: Users can set custom work and break durations, overriding the 1:1 ratio.
 - **Real-Time Digital Timer**: Displays elapsed and remaining time with millisecond precision.
 - **Analog Second Hand**: Visualizes time progress with a sweeping second hand on an analog clock face.
-- **Color-Coded Modes**: The UI changes color to indicate whether you are in a "Work" (blue) or "Break" (green) session.
+- **Local Time Display**: Shows the current local time in the header.
+- **Progress Bar**: Visual representation of work/break progress.
+- **Color-Coded Modes**: The UI changes color to indicate whether you are in a "Work" (blue) or "Break" (green) session, with dynamic progress bar colors.
 - **Persistent State**: Automatically saves and restores your current timer progress and session data, even if the app is closed.
 - **Daily Session Log**: Tracks and displays a log of all completed work and break sessions for the current day.
+- **Stopwatch Functionality**: A separate, full-featured stopwatch with start, stop, reset, and lap capabilities.
 - **Improved Labeling**: Clear and descriptive button labels guide you through the app's flow.
 - **PWA Support**: Installable on mobile devices and works offline.
 - **Keyboard Shortcuts**: Use the spacebar to toggle sessions.
