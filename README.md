@@ -28,17 +28,3 @@ A single-tap web app for balancing work and break cycles to enhance productivity
 6.  **Pause/Resume**: You can pause and resume the timer at any point without losing your progress.
 7.  **Session Log**: View your completed sessions for the day in the "Today's Sessions" log at the bottom of the page.
 
-## Deployment to GitHub Pages
-
-1.  **Create a Repository**: Create a new public repository on GitHub.
-2.  **Upload Files**: Push the following files to your repository:
-    - `index.html`
-    - `manifest.json`
-    - `service-worker.js`
-    - `README.md`
-    - (Optional) `icon-192.png` and `icon-512.png` for the PWA icons.
-3.  **Enable GitHub Pages**:
-    - Go to your repository's "Settings" tab.
-    - In the "Pages" section, select the `main` branch as the source.
-    - Save your changes.
-4.  **Access Your App**: Your app will be live at `https://<your-username>.github.io/<your-repository-name>`.
