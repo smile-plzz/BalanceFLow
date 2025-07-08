@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work-Break Balance</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .transition-colors {
+            transition: background-color 0.5s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen text-gray-800 p-4">
+
+    <div id="app" class="w-full max-w-md mx-auto text-center">
+        <!-- Header -->
+        <header id="header" class="p-6 transition-colors rounded-t-lg">
+            <h1 id="mode-display" class="text-3xl font-bold text-white">Tap to Start Work</h1>
+        </header>
+
+        <!-- Timer Display -->
+        <div class="bg-white p-6 shadow-lg rounded-b-lg flex flex-col items-center">
+            <div id="analog-clock" class="relative w-40 h-40 mb-6">
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="48" fill="none" stroke="#E5E7EB" stroke-width="2"/>
+                    <line id="second-hand" x1="50" y1="50" x2="50" y2="10" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" transform-origin="50 50"/>
+                </svg>
+            </div>
+            <div id="timer-card" class="text-center mb-6">
+                <p class="text-xl">Elapsed: <span id="elapsed-time" class="font-mono">00:00:00</span></p>
+                <p class="text-xl">Remaining: <span id="remaining-time" class="font-mono">N/A</span></p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div id="action-buttons" class="mb-6">
+                <button id="main-button" class="bg-blue-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75">
+                    Start Work
+                </button>
+                <button id="pause-button" class="hidden mt-4 bg-gray-500 text-white font-bold py-2 px-4 rounded-full shadow-lg hover:bg-gray-600 transition-colors focus:outline-none text-sm">
+                    Pause
+                </button>
+            </div>
+            
+            <p class="text-gray-500 text-sm">Hint: Press the spacebar to toggle the timer.</p>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-6 w-full max-w-md mx-auto">
+            <p id="summary-display" class="text-lg text-gray-600 text-center mb-4">Today: 0 cycles, 0 min balanced</p>
+            <div id="session-log-container" class="bg-white p-4 rounded-lg shadow-inner">
+                <h3 class="text-md font-semibold text-gray-700 mb-2">Today's Sessions</h3>
+                <ul id="session-log" class="text-sm text-gray-600 list-disc list-inside"></ul>
+            </div>
+            <button id="reset-button" class="mt-4 bg-red-500 text-white font-bold py-2 px-4 rounded-full shadow-lg hover:bg-red-600 transition-colors focus:outline-none text-sm">Reset Session Data</button>
+        </footer>
+    </div>
+
+    <script>
+        const state = {
+            mode: 'stopped', // 'stopped', 'work', 'break', 'paused'
+            timerId: null,
+            startTime: null,
+            elapsedSeconds: 0,
+            breakDuration: 0,
+            pausedTime: 0,
+        };
+
+        const ui = {
+            header: document.getElementById('header'),
+            modeDisplay: document.getElementById('mode-display'),
+            elapsedTime: document.getElementById('elapsed-time'),
+            remainingTime: document.getElementById('remaining-time'),
+            mainButton: document.getElementById('main-button'),
+            pauseButton: document.getElementById('pause-button'),
+            summaryDisplay: document.getElementById('summary-display'),
+            secondHand: document.getElementById('second-hand'),
+            sessionLog: document.getElementById('session-log'),
+            resetButton: document.getElementById('reset-button'),
+        };
+
+        const settings = {
+            colors: {
+                work: 'bg-blue-500',
+                break: 'bg-green-500',
+                stopped: 'bg-gray-400',
+                paused: 'bg-yellow-500',
+            },
+            buttonColors: {
+                work: 'bg-blue-500',
+                break: 'bg-green-500',
+                start: 'bg-blue-500',
+            }
+        };
+
+        let dailySummary = {
+            date: new Date().toLocaleDateString(),
+            cycles: 0,
+            totalMinutes: 0,
+            sessions: [],
+        };
+
+        // --- Core Logic ---
+
+        function startTimer() {
+            state.startTime = Date.now() - state.elapsedSeconds * 1000;
+            state.timerId = setInterval(updateTimer, 50);
+            ui.pauseButton.classList.remove('hidden');
+            ui.pauseButton.textContent = 'Pause';
+        }
+
+        function stopTimer() {
+            clearInterval(state.timerId);
+            state.timerId = null;
+        }
+
+        function updateTimer() {
+            saveState();
+            const now = Date.now();
+            const elapsedMilliseconds = now - state.startTime;
+            state.elapsedSeconds = Math.floor(elapsedMilliseconds / 1000);
+            ui.elapsedTime.textContent = formatTime(elapsedMilliseconds, true);
+
+            const seconds = new Date().getSeconds();
+            const secondsDegrees = ((seconds / 60) * 360) + 90; // offset by 90 degrees
+            ui.secondHand.style.transform = `rotate(${secondsDegrees}deg)`;
+
+            if (state.mode === 'work') {
+                const currentMinutes = Math.floor(state.elapsedSeconds / 60);
+                const newTotalMinutes = dailySummary.totalMinutes + currentMinutes;
+                ui.summaryDisplay.textContent = `Today: ${dailySummary.cycles} cycles, ${newTotalMinutes} min balanced`;
+            } else if (state.mode === 'break') {
+                const remaining = state.breakDuration * 1000 - elapsedMilliseconds;
+                ui.remainingTime.textContent = formatTime(remaining, true);
+                if (remaining <= 0) {
+                    handleSessionEnd();
+                }
+            }
+        }
+
+        function handleSessionEnd() {
+            stopTimer();
+            playChime();
+            const sessionDuration = Math.round(state.elapsedSeconds / 60);
+            if (state.mode === 'work') {
+                dailySummary.cycles++;
+                dailySummary.totalMinutes += sessionDuration;
+                dailySummary.sessions.push({ type: 'Work', duration: sessionDuration });
+                updateSummary();
+                saveSummary();
+                state.breakDuration = state.elapsedSeconds;
+                switchMode('break');
+            } else if (state.mode === 'break') {
+                dailySummary.sessions.push({ type: 'Break', duration: sessionDuration });
+                updateSummary();
+                saveSummary();
+                alert("Break's over! Time to get back to work.");
+                switchMode('work');
+            }
+            localStorage.removeItem('appState');
+        }
+
+        function switchMode(newMode) {
+            state.elapsedSeconds = 0;
+            state.pausedTime = 0;
+            ui.elapsedTime.textContent = formatTime(0, true);
+
+            if (newMode === 'work') {
+                state.mode = 'work';
+                ui.modeDisplay.textContent = 'WORK';
+                ui.remainingTime.textContent = 'N/A';
+                ui.mainButton.textContent = 'End Work, Start Break';
+                updateColors('work');
+                startTimer();
+            } else if (newMode === 'break') {
+                state.mode = 'break';
+                ui.modeDisplay.textContent = 'BREAK';
+                ui.mainButton.textContent = 'End Break, Start Work';
+                updateColors('break');
+                startTimer();
+            } else if (newMode === 'stopped') {
+                state.mode = 'stopped';
+                ui.modeDisplay.textContent = 'Tap to Start Work';
+                ui.remainingTime.textContent = 'N/A';
+                ui.mainButton.textContent = 'Start Work';
+                ui.pauseButton.classList.add('hidden');
+                updateColors('stopped');
+            }
+        }
+
+        // --- UI & Event Handlers ---
+
+        function updateColors(mode) {
+            ui.header.className = `p-8 transition-colors rounded-t-lg ${settings.colors[mode]}`;
+            if (mode === 'work' || mode === 'stopped') {
+                 ui.mainButton.className = `bg-blue-500 text-white text-lg font-semibold py-4 px-10 rounded-lg shadow-md hover:bg-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75`;
+            } else {
+                 ui.mainButton.className = `bg-green-500 text-white text-lg font-semibold py-4 px-10 rounded-lg shadow-md hover:bg-green-600 transition-all focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75`;
+            }
+        }
+
+        ui.mainButton.addEventListener('click', () => {
+            if (state.mode === 'stopped') {
+                switchMode('work');
+            } else {
+                handleSessionEnd();
+            }
+        });
+
+        ui.pauseButton.addEventListener('click', () => {
+            if (state.mode === 'paused') {
+                state.mode = state.pausedTime > 0 ? 'break' : 'work'; // Resume to correct mode
+                ui.pauseButton.textContent = 'Pause';
+                state.startTime = Date.now() - state.pausedTime;
+                startTimer();
+            } else {
+                state.pausedTime = state.elapsedSeconds * 1000;
+                stopTimer();
+                state.mode = 'paused';
+                ui.pauseButton.textContent = 'Resume';
+            }
+        });
+
+        ui.resetButton.addEventListener('click', () => {
+            if (confirm('Are you sure you want to reset all session data?')) {
+                resetSessionData();
+            }
+        });
+        
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                ui.mainButton.click();
+            }
+        });
+
+        // --- Utility Functions ---
+
+        function formatTime(milliseconds, showMilliseconds = false) {
+            const totalSeconds = Math.floor(milliseconds / 1000);
+            const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const secs = (totalSeconds % 60).toString().padStart(2, '0');
+            if (showMilliseconds) {
+                const ms = Math.floor((milliseconds % 1000) / 10).toString().padStart(2, '0');
+                return `${mins}:${secs}:${ms}`;
+            } else {
+                return `${mins}:${secs}`;
+            }
+        }
+
+        function playChime() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 note
+                gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 1);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                console.error("Web Audio API is not supported in this browser.", e);
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('appState', JSON.stringify(state));
+        }
+
+        function resetSessionData() {
+            localStorage.removeItem('appState');
+            localStorage.removeItem('dailySummary');
+            dailySummary = {
+                date: new Date().toLocaleDateString(),
+                cycles: 0,
+                totalMinutes: 0,
+                sessions: [],
+            };
+            stopTimer();
+            switchMode('stopped');
+            updateSummary();
+        }
+
+        function loadState() {
+            const savedState = localStorage.getItem('appState');
+            if (savedState) {
+                const restoredState = JSON.parse(savedState);
+                const today = new Date().toLocaleDateString();
+                // Check if the saved state is from today
+                if (new Date(restoredState.startTime).toLocaleDateString() === today) {
+                    Object.assign(state, restoredState);
+                    // We need to re-initiate the timer and UI based on the loaded state
+                    if(state.mode === 'work' || state.mode === 'break') {
+                        updateColors(state.mode);
+                        ui.modeDisplay.textContent = state.mode.toUpperCase();
+                        ui.mainButton.textContent = `End ${state.mode.charAt(0).toUpperCase() + state.mode.slice(1)}`;
+                        ui.elapsedTime.textContent = formatTime(state.elapsedSeconds * 1000, true);
+                        if (state.mode === 'break') {
+                            ui.remainingTime.textContent = formatTime(state.breakDuration * 1000 - state.elapsedSeconds * 1000, true);
+                        }
+                        startTimer();
+                    } else if (state.mode === 'paused') {
+                        // Handle paused state restoration
+                        updateColors(state.mode);
+                        ui.modeDisplay.textContent = 'PAUSED';
+                        ui.pauseButton.textContent = 'Resume';
+                        ui.pauseButton.classList.remove('hidden');
+                    }
+                } else {
+                    localStorage.removeItem('appState');
+                }
+            }
+        }
+
+        // --- LocalStorage & Initialization ---
+
+        function saveSummary() {
+            localStorage.setItem('dailySummary', JSON.stringify(dailySummary));
+        }
+
+        function loadSummary() {
+            const saved = localStorage.getItem('dailySummary');
+            const today = new Date().toLocaleDateString();
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.date === today) {
+                    dailySummary = parsed;
+                } else {
+                    // It's a new day, reset summary
+                    saveSummary(); 
+                }
+            }
+            updateSummary();
+        }
+
+        function updateSummary() {
+            ui.summaryDisplay.textContent = `Today: ${dailySummary.cycles} cycles, ${dailySummary.totalMinutes} min balanced`;
+            ui.sessionLog.innerHTML = '';
+            dailySummary.sessions.forEach(session => {
+                const li = document.createElement('li');
+                li.textContent = `${session.type}: ${session.duration} min`;
+                ui.sessionLog.appendChild(li);
+            });
+        }
+
+        // --- PWA Service Worker ---
+        
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/service-worker.js')
+                        .then(registration => {
+                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                        })
+                        .catch(err => {
+                            console.log('ServiceWorker registration failed: ', err);
+                        });
+                });
+            }
+        }
+
+        // --- Initial Load ---
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSummary();
+            loadState();
+            if (state.mode === 'stopped') {
+                switchMode('stopped');
+            }
+            registerServiceWorker();
+        });
+
+    </script>
+</body>
+</html>
