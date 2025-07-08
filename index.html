@@ -53,6 +53,38 @@
             <p class="text-gray-500 text-sm">Hint: Press the spacebar to toggle the timer.</p>
         </div>
 
+        <!-- Other Clock Features -->
+        <div class="bg-white p-6 shadow-lg rounded-lg mt-6 w-full">
+            <h2 class="text-2xl font-bold mb-4">Other Clock Features</h2>
+
+            <!-- Stopwatch -->
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-2">Stopwatch</h3>
+                <p id="stopwatch-display" class="text-4xl font-mono mb-4">00:00:00.000</p>
+                <div class="flex justify-center space-x-4">
+                    <button id="stopwatch-start" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">Start</button>
+                    <button id="stopwatch-stop" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">Stop</button>
+                    <button id="stopwatch-reset" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors">Reset</button>
+                    <button id="stopwatch-lap" class="bg-purple-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-600 transition-colors">Lap</button>
+                </div>
+                <ul id="stopwatch-laps" class="mt-4 text-left max-h-40 overflow-y-auto"></ul>
+            </div>
+
+            <!-- Customization -->
+            <div>
+                <h3 class="text-xl font-semibold mb-2">Customization</h3>
+                <div class="mb-4">
+                    <label for="work-duration" class="block text-gray-700 text-sm font-bold mb-2">Work Duration (minutes):</label>
+                    <input type="number" id="work-duration" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="25">
+                </div>
+                <div class="mb-4">
+                    <label for="break-duration" class="block text-gray-700 text-sm font-bold mb-2">Break Duration (minutes):</label>
+                    <input type="number" id="break-duration" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="5">
+                </div>
+                <button id="save-settings" class="bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors">Save Settings</button>
+            </div>
+        </div>
+
         <!-- Footer -->
         <footer class="mt-6 w-full max-w-md mx-auto">
             <p id="summary-display" class="text-lg text-gray-600 text-center mb-4">Today: 0 cycles, 0 min balanced</p>
@@ -74,6 +106,14 @@
             pausedTime: 0,
         };
 
+        const stopwatchState = {
+            isRunning: false,
+            startTime: 0,
+            elapsedTime: 0,
+            timerInterval: null,
+            lapTimes: [],
+        };
+
         const ui = {
             header: document.getElementById('header'),
             modeDisplay: document.getElementById('mode-display'),
@@ -88,6 +128,15 @@
             resetButton: document.getElementById('reset-button'),
             progressBarContainer: document.getElementById('progress-bar-container'),
             progressBar: document.getElementById('progress-bar'),
+            stopwatchDisplay: document.getElementById('stopwatch-display'),
+            stopwatchStart: document.getElementById('stopwatch-start'),
+            stopwatchStop: document.getElementById('stopwatch-stop'),
+            stopwatchReset: document.getElementById('stopwatch-reset'),
+            stopwatchLap: document.getElementById('stopwatch-lap'),
+            stopwatchLaps: document.getElementById('stopwatch-laps'),
+            workDurationInput: document.getElementById('work-duration'),
+            breakDurationInput: document.getElementById('break-duration'),
+            saveSettingsButton: document.getElementById('save-settings'),
         };
 
         const settings = {
@@ -144,9 +193,9 @@
                 const currentMinutes = Math.floor(state.elapsedSeconds / 60);
                 const newTotalMinutes = dailySummary.totalMinutes + currentMinutes;
                 ui.summaryDisplay.textContent = `Today: ${dailySummary.cycles} cycles, ${newTotalMinutes} min balanced`;
-                // Update progress bar for work mode (assuming a fixed work duration for progress visualization, e.g., 25 minutes)
-                const workDuration = 25 * 60; // 25 minutes in seconds
-                const progress = Math.min(100, (state.elapsedSeconds / workDuration) * 100);
+                // Update progress bar for work mode based on custom work duration
+                const workDurationSeconds = parseInt(localStorage.getItem('workDuration') || 25) * 60;
+                const progress = Math.min(100, (state.elapsedSeconds / workDurationSeconds) * 100);
                 ui.progressBar.style.width = `${progress}%`;
                 ui.progressBar.className = `h-2.5 rounded-full ${settings.progressBarColors.work}`;
             } else if (state.mode === 'break') {
@@ -171,7 +220,7 @@
                 dailySummary.sessions.push({ type: 'Work', duration: sessionDuration });
                 updateSummary();
                 saveSummary();
-                state.breakDuration = state.elapsedSeconds;
+                state.breakDuration = parseInt(localStorage.getItem('breakDuration') || 5) * 60; // Use customized break duration
                 switchMode('break');
             } else if (state.mode === 'break') {
                 dailySummary.sessions.push({ type: 'Break', duration: sessionDuration });
@@ -236,6 +285,43 @@
         // Call updateLocalTime every second
         setInterval(updateLocalTime, 1000);
 
+        // --- Stopwatch Functions ---
+        function startStopwatch() {
+            if (!stopwatchState.isRunning) {
+                stopwatchState.startTime = Date.now() - stopwatchState.elapsedTime;
+                stopwatchState.timerInterval = setInterval(updateStopwatchDisplay, 10);
+                stopwatchState.isRunning = true;
+            }
+        }
+
+        function stopStopwatch() {
+            clearInterval(stopwatchState.timerInterval);
+            stopwatchState.isRunning = false;
+        }
+
+        function resetStopwatch() {
+            stopStopwatch();
+            stopwatchState.elapsedTime = 0;
+            stopwatchState.lapTimes = [];
+            updateStopwatchDisplay();
+            ui.stopwatchLaps.innerHTML = '';
+        }
+
+        function lapStopwatch() {
+            if (stopwatchState.isRunning) {
+                const lapTime = stopwatchState.elapsedTime;
+                stopwatchState.lapTimes.push(lapTime);
+                const li = document.createElement('li');
+                li.textContent = `Lap ${stopwatchState.lapTimes.length}: ${formatTime(lapTime, true)}`;
+                ui.stopwatchLaps.appendChild(li);
+            }
+        }
+
+        function updateStopwatchDisplay() {
+            stopwatchState.elapsedTime = Date.now() - stopwatchState.startTime;
+            ui.stopwatchDisplay.textContent = formatTime(stopwatchState.elapsedTime, true);
+        }
+
         ui.mainButton.addEventListener('click', () => {
             if (state.mode === 'stopped') {
                 switchMode('work');
@@ -271,6 +357,15 @@
             }
         });
 
+        // --- Stopwatch Event Listeners ---
+        ui.stopwatchStart.addEventListener('click', startStopwatch);
+        ui.stopwatchStop.addEventListener('click', stopStopwatch);
+        ui.stopwatchReset.addEventListener('click', resetStopwatch);
+        ui.stopwatchLap.addEventListener('click', lapStopwatch);
+
+        // --- Customization Event Listener ---
+        ui.saveSettingsButton.addEventListener('click', saveSettings);
+
         // --- Utility Functions ---
 
         function formatTime(milliseconds, showMilliseconds = false) {
@@ -278,7 +373,7 @@
             const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
             const secs = (totalSeconds % 60).toString().padStart(2, '0');
             if (showMilliseconds) {
-                const ms = Math.floor((milliseconds % 1000) / 10).toString().padStart(2, '0');
+                const ms = Math.floor((milliseconds % 1000)).toString().padStart(3, '0'); // Changed to 3 for milliseconds
                 return `${mins}:${secs}:${ms}`;
             } else {
                 return `${mins}:${secs}`;
@@ -404,6 +499,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadSummary();
             loadState();
+            loadSettings(); // Load customization settings
             if (state.mode === 'stopped') {
                 switchMode('stopped');
             }
