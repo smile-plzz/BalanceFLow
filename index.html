@@ -13,86 +13,136 @@
         .transition-colors {
             transition: background-color 0.5s ease;
         }
+        .focus-outline:focus {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+        .tooltip {
+            position: absolute;
+            z-index: 10;
+            background: #222;
+            color: #fff;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .has-tooltip:hover .tooltip, .has-tooltip:focus .tooltip {
+            opacity: 1;
+        }
+        @media (max-width: 500px) {
+            #app {
+                padding: 0.5rem;
+            }
+            .w-40, .h-40 {
+                width: 7rem !important;
+                height: 7rem !important;
+            }
+        }
     </style>
 </head>
-<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen text-gray-800 p-4">
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen text-gray-800 p-2 sm:p-4">
 
     <div id="app" class="w-full max-w-md mx-auto text-center">
         <!-- Header -->
-        <header id="header" class="p-6 transition-colors rounded-t-lg">
-            <h1 id="mode-display" class="text-3xl font-bold text-white">Tap to Start Work</h1>
-            <p id="local-time" class="text-white text-sm mt-2"></p>
+        <header id="header" class="p-6 transition-colors rounded-t-lg" aria-label="App Header">
+            <h1 id="mode-display" class="text-3xl font-bold text-white" tabindex="0">Tap to Start Work</h1>
+            <p id="local-time" class="text-white text-sm mt-2" aria-live="polite"></p>
         </header>
 
         <!-- Timer Display -->
         <div class="bg-white p-6 shadow-lg rounded-b-lg flex flex-col items-center">
-            <div id="analog-clock" class="relative w-40 h-40 mb-6">
-                <svg class="w-full h-full" viewBox="0 0 100 100">
+            <div id="analog-clock" class="relative w-40 h-40 mb-6" aria-label="Analog Clock">
+                <svg class="w-full h-full" viewBox="0 0 100 100" aria-hidden="true">
                     <circle cx="50" cy="50" r="48" fill="none" stroke="#E5E7EB" stroke-width="2"/>
                     <line id="second-hand" x1="50" y1="50" x2="50" y2="10" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" transform-origin="50 50"/>
                 </svg>
             </div>
             <div id="timer-card" class="text-center mb-6">
-                <p class="text-xl">Elapsed: <span id="elapsed-time" class="font-mono">00:00:00</span></p>
-                <p class="text-xl">Remaining: <span id="remaining-time" class="font-mono">N/A</span></p>
-                <div id="progress-bar-container" class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-4">
+                <p class="text-xl">Elapsed: <span id="elapsed-time" class="font-mono" aria-live="polite">00:00:00</span></p>
+                <p class="text-xl">Remaining: <span id="remaining-time" class="font-mono" aria-live="polite">N/A</span></p>
+                <div id="progress-bar-container" class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-4" aria-label="Progress Bar">
                     <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div id="action-buttons" class="mb-6">
-                <button id="main-button" class="bg-blue-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75">
+            <div id="action-buttons" class="mb-6 flex flex-col items-center gap-2">
+                <button id="main-button" class="bg-blue-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 focus-outline has-tooltip" role="button" aria-pressed="false" tabindex="0">
                     Start Work
+                    <span class="tooltip">Start or end a work/break session</span>
                 </button>
-                <button id="pause-button" class="hidden mt-4 bg-gray-500 text-white font-bold py-2 px-4 rounded-full shadow-lg hover:bg-gray-600 transition-colors focus:outline-none text-sm">
+                <button id="pause-button" class="hidden mt-2 bg-gray-500 text-white font-bold py-2 px-4 rounded-full shadow-lg hover:bg-gray-600 transition-colors focus:outline-none text-sm focus-outline has-tooltip" role="button" aria-pressed="false" tabindex="0">
                     Pause
+                    <span class="tooltip">Pause or resume the timer</span>
                 </button>
             </div>
             
-            <p class="text-gray-500 text-sm">Hint: Press the spacebar to toggle the timer.</p>
+            <p class="text-gray-500 text-sm" aria-label="Hint">Hint: Press the spacebar to toggle the timer.</p>
         </div>
 
         <!-- Other Clock Features -->
         <div class="bg-white p-6 shadow-lg rounded-lg mt-6 w-full">
-            <h2 class="text-2xl font-bold mb-4">Other Clock Features</h2>
+            <h2 class="text-2xl font-bold mb-4" tabindex="0">Other Clock Features</h2>
 
             <!-- Stopwatch -->
             <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-2">Stopwatch</h3>
-                <p id="stopwatch-display" class="text-4xl font-mono mb-4">00:00:00.000</p>
-                <div class="flex justify-center space-x-4">
-                    <button id="stopwatch-start" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">Start</button>
-                    <button id="stopwatch-stop" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">Stop</button>
-                    <button id="stopwatch-reset" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors">Reset</button>
-                    <button id="stopwatch-lap" class="bg-purple-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-600 transition-colors">Lap</button>
+                <h3 class="text-xl font-semibold mb-2" tabindex="0">Stopwatch</h3>
+                <p id="stopwatch-display" class="text-4xl font-mono mb-4" aria-live="polite">00:00:00.000</p>
+                <div class="flex flex-wrap justify-center space-x-2 space-y-2">
+                    <button id="stopwatch-start" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors focus:outline-none focus-outline has-tooltip" aria-label="Start Stopwatch" tabindex="0">
+                        Start
+                        <span class="tooltip">Start the stopwatch</span>
+                    </button>
+                    <button id="stopwatch-stop" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors focus:outline-none focus-outline has-tooltip" aria-label="Stop Stopwatch" tabindex="0">
+                        Stop
+                        <span class="tooltip">Stop the stopwatch</span>
+                    </button>
+                    <button id="stopwatch-reset" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors focus:outline-none focus-outline has-tooltip" aria-label="Reset Stopwatch" tabindex="0">
+                        Reset
+                        <span class="tooltip">Reset the stopwatch</span>
+                    </button>
+                    <button id="stopwatch-lap" class="bg-purple-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-600 transition-colors focus:outline-none focus-outline has-tooltip" aria-label="Lap Stopwatch" tabindex="0">
+                        Lap
+                        <span class="tooltip">Record a lap</span>
+                    </button>
                 </div>
-                <ul id="stopwatch-laps" class="mt-4 text-left max-h-40 overflow-y-auto"></ul>
+                <ul id="stopwatch-laps" class="mt-4 text-left max-h-40 overflow-y-auto" aria-label="Stopwatch Laps"></ul>
             </div>
 
             <!-- Customization -->
             <div>
-                <h3 class="text-xl font-semibold mb-2">Customization</h3>
+                <h3 class="text-xl font-semibold mb-2" tabindex="0">Customization</h3>
                 <div class="mb-4">
                     <label for="work-duration" class="block text-gray-700 text-sm font-bold mb-2">Work Duration (minutes):</label>
-                    <input type="number" id="work-duration" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="25">
+                    <input type="number" id="work-duration" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus-outline" min="1" max="180" value="25" aria-label="Work Duration">
                 </div>
                 <div class="mb-4">
                     <label for="break-duration" class="block text-gray-700 text-sm font-bold mb-2">Break Duration (minutes):</label>
-                    <input type="number" id="break-duration" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="5">
+                    <input type="number" id="break-duration" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus-outline" min="1" max="60" value="5" aria-label="Break Duration">
                 </div>
-                <button id="save-settings" class="bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors">Save Settings</button>
+                <button id="save-settings" class="bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors focus:outline-none focus-outline has-tooltip" aria-label="Save Settings" tabindex="0">
+                    Save Settings
+                    <span class="tooltip">Save your custom durations</span>
+                </button>
+                <p id="settings-feedback" class="text-green-600 text-sm mt-2 hidden" aria-live="polite"></p>
             </div>
         </div>
 
         <!-- Footer -->
-        <footer class="mt-6 w-full max-w-md mx-auto">
-            <p id="summary-display" class="text-lg text-gray-600 text-center mb-4">Today: 0 cycles, 0 min balanced</p>
+        <footer class="mt-6 w-full max-w-md mx-auto" aria-label="Footer">
+            <p id="summary-display" class="text-lg text-gray-600 text-center mb-4" aria-live="polite">Today: 0 cycles, 0 min balanced</p>
             <div id="session-log-container" class="bg-white p-4 rounded-lg shadow-inner">
-                <h3 class="text-md font-semibold text-gray-700 mb-2">Today's Sessions</h3>
-                <ul id="session-log" class="text-sm text-gray-600 list-disc list-inside"></ul>
+                <h3 class="text-md font-semibold text-gray-700 mb-2" tabindex="0">Today's Sessions</h3>
+                <ul id="session-log" class="text-sm text-gray-600 list-disc list-inside" aria-label="Session Log"></ul>
             </div>
-            <button id="reset-button" class="mt-4 bg-red-500 text-white font-bold py-2 px-4 rounded-full shadow-lg hover:bg-red-600 transition-colors focus:outline-none text-sm">Reset Session Data</button>
+            <button id="reset-button" class="mt-4 bg-red-500 text-white font-bold py-2 px-4 rounded-full shadow-lg hover:bg-red-600 transition-colors focus:outline-none text-sm focus-outline has-tooltip" aria-label="Reset Session Data" tabindex="0">
+                Reset Session Data
+                <span class="tooltip">Clear all today's data</span>
+            </button>
         </footer>
     </div>
 
@@ -181,7 +231,7 @@
         function updateTimer() {
             saveState();
             const now = Date.now();
-            const elapsedMilliseconds = now - state.startTime;
+            const elapsedMilliseconds = Math.max(0, now - state.startTime);
             state.elapsedSeconds = Math.floor(elapsedMilliseconds / 1000);
             ui.elapsedTime.textContent = formatTime(elapsedMilliseconds, true);
 
@@ -190,16 +240,16 @@
             ui.secondHand.style.transform = `rotate(${secondsDegrees}deg)`;
 
             if (state.mode === 'work') {
-                const currentMinutes = Math.floor(state.elapsedSeconds / 60);
-                const newTotalMinutes = dailySummary.totalMinutes + currentMinutes;
-                ui.summaryDisplay.textContent = `Today: ${dailySummary.cycles} cycles, ${newTotalMinutes} min balanced`;
-                // Update progress bar for work mode based on custom work duration
                 const workDurationSeconds = parseInt(localStorage.getItem('workDuration') || 25) * 60;
                 const progress = Math.min(100, (state.elapsedSeconds / workDurationSeconds) * 100);
                 ui.progressBar.style.width = `${progress}%`;
                 ui.progressBar.className = `h-2.5 rounded-full ${settings.progressBarColors.work}`;
+                ui.remainingTime.textContent = formatTime(Math.max(0, (workDurationSeconds - state.elapsedSeconds) * 1000), true);
+                if (state.elapsedSeconds >= workDurationSeconds) {
+                    handleSessionEnd();
+                }
             } else if (state.mode === 'break') {
-                const remaining = state.breakDuration * 1000 - elapsedMilliseconds;
+                const remaining = Math.max(0, state.breakDuration * 1000 - elapsedMilliseconds);
                 ui.remainingTime.textContent = formatTime(remaining, true);
                 const progress = Math.min(100, (elapsedMilliseconds / (state.breakDuration * 1000)) * 100);
                 ui.progressBar.style.width = `${progress}%`;
@@ -313,7 +363,9 @@
                 stopwatchState.lapTimes.push(lapTime);
                 const li = document.createElement('li');
                 li.textContent = `Lap ${stopwatchState.lapTimes.length}: ${formatTime(lapTime, true)}`;
+                li.setAttribute('tabindex', '0');
                 ui.stopwatchLaps.appendChild(li);
+                ui.stopwatchLaps.scrollTop = ui.stopwatchLaps.scrollHeight;
             }
         }
 
@@ -373,7 +425,7 @@
             const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
             const secs = (totalSeconds % 60).toString().padStart(2, '0');
             if (showMilliseconds) {
-                const ms = Math.floor((milliseconds % 1000)).toString().padStart(3, '0'); // Changed to 3 for milliseconds
+                const ms = Math.floor(milliseconds % 1000).toString().padStart(3, '0');
                 return `${mins}:${secs}:${ms}`;
             } else {
                 return `${mins}:${secs}`;
@@ -471,11 +523,19 @@
         function updateSummary() {
             ui.summaryDisplay.textContent = `Today: ${dailySummary.cycles} cycles, ${dailySummary.totalMinutes} min balanced`;
             ui.sessionLog.innerHTML = '';
-            dailySummary.sessions.forEach(session => {
+            if (dailySummary.sessions.length === 0) {
                 const li = document.createElement('li');
-                li.textContent = `${session.type}: ${session.duration} min`;
+                li.textContent = 'No sessions yet.';
+                li.setAttribute('tabindex', '0');
                 ui.sessionLog.appendChild(li);
-            });
+            } else {
+                dailySummary.sessions.forEach(session => {
+                    const li = document.createElement('li');
+                    li.textContent = `${session.type}: ${session.duration} min`;
+                    li.setAttribute('tabindex', '0');
+                    ui.sessionLog.appendChild(li);
+                });
+            }
         }
 
         // --- PWA Service Worker ---
@@ -508,6 +568,50 @@
             updateLocalTime(); // Initial call to display time immediately
         });
 
+        // --- Customization: Save and Load Settings ---
+        function saveSettings() {
+            const work = parseInt(ui.workDurationInput.value, 10);
+            const brk = parseInt(ui.breakDurationInput.value, 10);
+            if (isNaN(work) || work < 1 || work > 180) {
+                showSettingsFeedback('Work duration must be between 1 and 180 minutes.', true);
+                ui.workDurationInput.focus();
+                return;
+            }
+            if (isNaN(brk) || brk < 1 || brk > 60) {
+                showSettingsFeedback('Break duration must be between 1 and 60 minutes.', true);
+                ui.breakDurationInput.focus();
+                return;
+            }
+            localStorage.setItem('workDuration', work);
+            localStorage.setItem('breakDuration', brk);
+            showSettingsFeedback('Settings saved!', false);
+        }
+
+        function loadSettings() {
+            const work = localStorage.getItem('workDuration');
+            const brk = localStorage.getItem('breakDuration');
+            if (work) ui.workDurationInput.value = work;
+            if (brk) ui.breakDurationInput.value = brk;
+        }
+
+        function showSettingsFeedback(msg, isError) {
+            const el = document.getElementById('settings-feedback');
+            el.textContent = msg;
+            el.classList.toggle('text-green-600', !isError);
+            el.classList.toggle('text-red-600', isError);
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 2000);
+        }
+
+        // --- Accessibility: Keyboard Navigation for Buttons ---
+        document.querySelectorAll('button, [tabindex="0"]').forEach(el => {
+            el.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    el.click();
+                }
+            });
+        });
     </script>
 </body>
 </html>
