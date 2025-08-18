@@ -6,6 +6,8 @@
     <title>Work-Break Balance</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" sizes="192x192" href="icon-192.png">
+    <meta name="theme-color" content="#3B82F6">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -154,6 +156,7 @@
             elapsedSeconds: 0,
             breakDuration: 0,
             pausedTime: 0,
+            previousMode: null,
         };
 
         const stopwatchState = {
@@ -271,12 +274,13 @@
                 updateSummary();
                 saveSummary();
                 state.breakDuration = parseInt(localStorage.getItem('breakDuration') || 5) * 60; // Use customized break duration
+                notifyUser("Work session complete. Break started.");
                 switchMode('break');
             } else if (state.mode === 'break') {
                 dailySummary.sessions.push({ type: 'Break', duration: sessionDuration });
                 updateSummary();
                 saveSummary();
-                alert("Break's over! Time to get back to work.");
+                notifyUser("Break's over! Time to get back to work.");
                 switchMode('work');
             }
             localStorage.removeItem('appState');
@@ -289,24 +293,30 @@
 
             if (newMode === 'work') {
                 state.mode = 'work';
+                state.previousMode = 'work';
                 ui.modeDisplay.textContent = 'WORK';
                 ui.remainingTime.textContent = 'N/A';
                 ui.mainButton.textContent = 'End Work, Start Break';
+                ui.mainButton.setAttribute('aria-pressed', 'true');
                 updateColors('work');
                 ui.progressBarContainer.classList.remove('hidden');
                 startTimer();
             } else if (newMode === 'break') {
                 state.mode = 'break';
+                state.previousMode = 'break';
                 ui.modeDisplay.textContent = 'BREAK';
                 ui.mainButton.textContent = 'End Break, Start Work';
+                ui.mainButton.setAttribute('aria-pressed', 'true');
                 updateColors('break');
                 ui.progressBarContainer.classList.remove('hidden');
                 startTimer();
             } else if (newMode === 'stopped') {
                 state.mode = 'stopped';
+                state.previousMode = null;
                 ui.modeDisplay.textContent = 'Tap to Start Work';
                 ui.remainingTime.textContent = 'N/A';
                 ui.mainButton.textContent = 'Start Work';
+                ui.mainButton.setAttribute('aria-pressed', 'false');
                 ui.pauseButton.classList.add('hidden');
                 updateColors('stopped');
                 ui.progressBarContainer.classList.add('hidden');
@@ -316,11 +326,24 @@
         // --- UI & Event Handlers ---
 
         function updateColors(mode) {
-            ui.header.className = `p-8 transition-colors rounded-t-lg ${settings.colors[mode]}`;
-            if (mode === 'work' || mode === 'stopped') {
-                 ui.mainButton.className = `bg-blue-500 text-white text-lg font-semibold py-4 px-10 rounded-lg shadow-md hover:bg-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75`;
+            const baseHeader = `p-6 transition-colors rounded-t-lg`;
+            if (mode === 'work') {
+                ui.header.className = `${baseHeader} ${settings.colors.work}`;
+                ui.mainButton.className = `bg-blue-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75`;
+            } else if (mode === 'break') {
+                ui.header.className = `${baseHeader} ${settings.colors.break}`;
+                ui.mainButton.className = `bg-green-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-green-600 transition-all focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75`;
+            } else if (mode === 'paused') {
+                ui.header.className = `${baseHeader} ${settings.colors.paused}`;
+                const previous = state.previousMode || 'work';
+                if (previous === 'break') {
+                    ui.mainButton.className = `bg-green-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-green-600 transition-all focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75`;
+                } else {
+                    ui.mainButton.className = `bg-blue-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75`;
+                }
             } else {
-                 ui.mainButton.className = `bg-green-500 text-white text-lg font-semibold py-4 px-10 rounded-lg shadow-md hover:bg-green-600 transition-all focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75`;
+                ui.header.className = `${baseHeader} ${settings.colors.stopped}`;
+                ui.mainButton.className = `bg-blue-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75`;
             }
             // Reset progress bar when mode changes
             ui.progressBar.style.width = '0%';
@@ -384,15 +407,20 @@
 
         ui.pauseButton.addEventListener('click', () => {
             if (state.mode === 'paused') {
-                state.mode = state.pausedTime > 0 ? 'break' : 'work'; // Resume to correct mode
+                state.mode = state.previousMode || 'work'; // Resume to the previous mode
                 ui.pauseButton.textContent = 'Pause';
                 state.startTime = Date.now() - state.pausedTime;
                 startTimer();
-            } else {
+                updateColors(state.mode);
+                ui.modeDisplay.textContent = state.mode.toUpperCase();
+            } else if (state.mode === 'work' || state.mode === 'break') {
+                state.previousMode = state.mode;
                 state.pausedTime = state.elapsedSeconds * 1000;
                 stopTimer();
                 state.mode = 'paused';
                 ui.pauseButton.textContent = 'Resume';
+                updateColors('paused');
+                ui.modeDisplay.textContent = 'PAUSED';
             }
         });
 
@@ -450,6 +478,18 @@
             }
         }
 
+        function notifyUser(message) {
+            try {
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('Work-Break Balance', { body: message });
+                } else {
+                    alert(message);
+                }
+            } catch (e) {
+                alert(message);
+            }
+        }
+
         function saveState() {
             localStorage.setItem('appState', JSON.stringify(state));
         }
@@ -473,25 +513,30 @@
             if (savedState) {
                 const restoredState = JSON.parse(savedState);
                 const today = new Date().toLocaleDateString();
-                // Check if the saved state is from today
-                if (new Date(restoredState.startTime).toLocaleDateString() === today) {
+                // If there is no startTime (e.g., paused/stopped) or it's from today, restore; otherwise, discard
+                if (!restoredState.startTime || new Date(restoredState.startTime).toLocaleDateString() === today) {
                     Object.assign(state, restoredState);
-                    // We need to re-initiate the timer and UI based on the loaded state
-                    if(state.mode === 'work' || state.mode === 'break') {
+                    if (state.mode === 'work' || state.mode === 'break') {
                         updateColors(state.mode);
                         ui.modeDisplay.textContent = state.mode.toUpperCase();
-                        ui.mainButton.textContent = `End ${state.mode.charAt(0).toUpperCase() + state.mode.slice(1)}`;
+                        ui.mainButton.textContent = state.mode === 'work' ? 'End Work, Start Break' : 'End Break, Start Work';
+                        ui.mainButton.setAttribute('aria-pressed', 'true');
                         ui.elapsedTime.textContent = formatTime(state.elapsedSeconds * 1000, true);
                         if (state.mode === 'break') {
-                            ui.remainingTime.textContent = formatTime(state.breakDuration * 1000 - state.elapsedSeconds * 1000, true);
+                            ui.remainingTime.textContent = formatTime(Math.max(0, state.breakDuration * 1000 - state.elapsedSeconds * 1000), true);
+                        } else if (state.mode === 'work') {
+                            const workDurationSeconds = parseInt(localStorage.getItem('workDuration') || 25) * 60;
+                            ui.remainingTime.textContent = formatTime(Math.max(0, (workDurationSeconds - state.elapsedSeconds) * 1000), true);
                         }
                         startTimer();
                     } else if (state.mode === 'paused') {
-                        // Handle paused state restoration
-                        updateColors(state.mode);
+                        updateColors('paused');
                         ui.modeDisplay.textContent = 'PAUSED';
                         ui.pauseButton.textContent = 'Resume';
                         ui.pauseButton.classList.remove('hidden');
+                        // reflect the intended action label based on previous mode
+                        ui.mainButton.textContent = (state.previousMode === 'break') ? 'End Break, Start Work' : 'End Work, Start Break';
+                        ui.mainButton.setAttribute('aria-pressed', 'true');
                     }
                 } else {
                     localStorage.removeItem('appState');
@@ -543,7 +588,7 @@
         function registerServiceWorker() {
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/service-worker.js')
+                    navigator.serviceWorker.register('service-worker.js')
                         .then(registration => {
                             console.log('ServiceWorker registration successful with scope: ', registration.scope);
                         })
@@ -566,6 +611,9 @@
             ui.progressBarContainer.classList.add('hidden'); // Ensure hidden on initial load
             registerServiceWorker();
             updateLocalTime(); // Initial call to display time immediately
+            if ('Notification' in window && Notification.permission === 'default') {
+                try { Notification.requestPermission(); } catch (_) {}
+            }
         });
 
         // --- Customization: Save and Load Settings ---
