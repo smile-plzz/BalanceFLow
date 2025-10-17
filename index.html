@@ -3,168 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Work-Break Balance</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>Work-Break Balance Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.3/dist/tailwind.min.css" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" sizes="192x192" href="icon-192.png">
     <meta name="theme-color" content="#3B82F6">
     <style>
+        /* General body font */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
+
+        /* Replaced custom focus-outline with Tailwind ring utilities */
         .transition-colors {
             transition: background-color 0.5s ease;
         }
-        .focus-outline:focus {
-            outline: 2px solid #2563eb;
-            outline-offset: 2px;
-        }
+        
+        /* Tooltip styling for cleaner CSS and better access to hover/focus state */
         .tooltip {
             position: absolute;
-            z-index: 10;
-            background: #222;
+            z-index: 20; /* Increased z-index */
+            background: rgba(34, 34, 34, 0.95);
             color: #fff;
             padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
+            border-radius: 0.375rem; /* rounded-md */
             font-size: 0.875rem;
             white-space: nowrap;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.2s;
+            transition: opacity 0.2s, transform 0.2s;
+            transform: translateY(5px);
+            bottom: 100%; /* Position above element */
+            left: 50%;
+            transform: translateX(-50%) translateY(5px);
         }
+
         .has-tooltip:hover .tooltip, .has-tooltip:focus .tooltip {
             opacity: 1;
+            transform: translateX(-50%) translateY(-5px); /* Move up slightly on hover/focus */
         }
+        
+        /* Minor mobile adjustments */
         @media (max-width: 500px) {
             #app {
                 padding: 0.5rem;
             }
             .w-40, .h-40 {
-                width: 7rem !important;
-                height: 7rem !important;
+                width: 9rem !important; /* Slightly larger on small screens */
+                height: 9rem !important;
             }
+            #stopwatch-display {
+                font-size: 2.25rem; /* Smaller stopwatch on mobile */
+            }
+        }
+
+        /* Analog clock hand animation */
+        #second-hand {
+            transition: transform 0.1s cubic-bezier(0, 0, 0.5, 1); /* Smoother transition */
         }
     </style>
 </head>
-<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen text-gray-800 p-2 sm:p-4">
+<body class="bg-gray-100 dark:bg-gray-900 flex flex-col items-center justify-center min-h-screen text-gray-800 dark:text-gray-100 p-2 sm:p-4">
 
     <div id="app" class="w-full max-w-md mx-auto text-center">
-        <!-- Header -->
-        <header id="header" class="p-6 transition-colors rounded-t-lg" aria-label="App Header">
-            <h1 id="mode-display" class="text-3xl font-bold text-white" tabindex="0">Tap to Start Work</h1>
-            <p id="local-time" class="text-white text-sm mt-2" aria-live="polite"></p>
+        <header id="header" class="p-6 transition-colors rounded-t-xl shadow-xl" aria-label="App Header">
+            <h1 id="mode-display" class="text-3xl font-extrabold text-white tracking-wider" tabindex="0">Tap to Start Work</h1>
+            <p id="local-time" class="text-white text-sm opacity-80 mt-2" aria-live="polite"></p>
         </header>
 
-        <!-- Timer Display -->
-        <div class="bg-white p-6 shadow-lg rounded-b-lg flex flex-col items-center">
+        <div class="bg-white dark:bg-gray-800 p-6 shadow-2xl rounded-b-xl flex flex-col items-center">
             <div id="analog-clock" class="relative w-40 h-40 mb-6" aria-label="Analog Clock">
                 <svg class="w-full h-full" viewBox="0 0 100 100" aria-hidden="true">
                     <circle cx="50" cy="50" r="48" fill="none" stroke="#E5E7EB" stroke-width="2"/>
-                    <line id="second-hand" x1="50" y1="50" x2="50" y2="10" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" transform-origin="50 50"/>
+                    <circle cx="50" cy="50" r="3" fill="#F59E0B"/> 
+                    <line id="second-hand" x1="50" y1="50" x2="50" y2="10" stroke="#F59E0B" stroke-width="3" stroke-linecap="round" transform-origin="50 50" style="transition: transform 0.1s cubic-bezier(0, 0, 0.5, 1);"/>
                 </svg>
             </div>
+            
             <div id="timer-card" class="text-center mb-6">
-                <p class="text-xl">Elapsed: <span id="elapsed-time" class="font-mono" aria-live="polite">00:00:00</span></p>
-                <p class="text-xl">Remaining: <span id="remaining-time" class="font-mono" aria-live="polite">N/A</span></p>
-                <div id="progress-bar-container" class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-4" aria-label="Progress Bar">
-                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                <p id="time-display" class="text-5xl font-extrabold font-mono mb-2" aria-live="polite">
+                    <span id="remaining-time" class="text-blue-600 dark:text-blue-400">N/A</span>
+                </p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Elapsed: <span id="elapsed-time" class="font-mono">00:00:00</span></p>
+
+                <div id="progress-bar-container" class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mt-4 overflow-hidden" aria-label="Progress Bar">
+                    <div id="progress-bar" class="bg-blue-600 h-full rounded-full transition-all duration-1000 ease-linear" style="width: 0%"></div>
                 </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div id="action-buttons" class="mb-6 flex flex-col items-center gap-2">
-                <button id="main-button" class="bg-blue-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 focus-outline has-tooltip" role="button" aria-pressed="false" tabindex="0">
+            <div id="action-buttons" class="mb-6 flex flex-col items-center gap-4">
+                <button id="main-button" class="bg-blue-500 text-white text-lg font-semibold py-3 px-10 rounded-xl shadow-lg hover:bg-blue-600 transition-all focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-600 focus:ring-opacity-50 has-tooltip relative" role="button" aria-pressed="false" tabindex="0">
                     Start Work
-                    <span class="tooltip">Start or end a work/break session</span>
+                    <span class="tooltip">Start a new Pomodoro session</span>
                 </button>
-                <button id="pause-button" class="hidden mt-2 bg-gray-500 text-white font-bold py-2 px-4 rounded-full shadow-lg hover:bg-gray-600 transition-colors focus:outline-none text-sm focus-outline has-tooltip" role="button" aria-pressed="false" tabindex="0">
+                <button id="pause-button" class="hidden text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium py-2 px-4 rounded-full shadow-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 focus:ring-opacity-75 has-tooltip relative" role="button" aria-pressed="false" tabindex="0">
                     Pause
                     <span class="tooltip">Pause or resume the timer</span>
                 </button>
             </div>
             
-            <p class="text-gray-500 text-sm" aria-label="Hint">Hint: Press the spacebar to toggle the timer.</p>
+            <p class="text-gray-500 dark:text-gray-400 text-sm" aria-label="Hint">Hint: Press <kbd class="px-1 py-0.5 border rounded-md bg-gray-100 dark:bg-gray-700">Space</kbd> to toggle the main timer.</p>
         </div>
 
-        <!-- Other Clock Features -->
-        <div class="bg-white p-6 shadow-lg rounded-lg mt-6 w-full">
-            <h2 class="text-2xl font-bold mb-4" tabindex="0">Other Clock Features</h2>
+        <div class="bg-white dark:bg-gray-800 p-6 shadow-2xl rounded-xl mt-6 w-full">
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2 dark:border-gray-700" tabindex="0">Tools</h2>
 
-            <!-- Stopwatch -->
             <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-2" tabindex="0">Stopwatch</h3>
-                <p id="stopwatch-display" class="text-4xl font-mono mb-4" aria-live="polite">00:00:00.000</p>
-                <div class="flex flex-wrap justify-center space-x-2 space-y-2">
-                    <button id="stopwatch-start" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors focus:outline-none focus-outline has-tooltip" aria-label="Start Stopwatch" tabindex="0">
+                <h3 class="text-xl font-semibold mb-2 text-left" tabindex="0">Stopwatch</h3>
+                <p id="stopwatch-display" class="text-4xl font-mono mb-4 text-center text-red-600 dark:text-red-400" aria-live="polite">00:00:00.000</p>
+                <div class="flex flex-wrap justify-center gap-2">
+                    <button id="stopwatch-start" class="flex-1 min-w-[70px] bg-blue-500 text-white font-medium py-2 px-3 rounded-lg hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 has-tooltip relative" aria-label="Start Stopwatch" tabindex="0">
                         Start
                         <span class="tooltip">Start the stopwatch</span>
                     </button>
-                    <button id="stopwatch-stop" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors focus:outline-none focus-outline has-tooltip" aria-label="Stop Stopwatch" tabindex="0">
+                    <button id="stopwatch-stop" class="flex-1 min-w-[70px] bg-red-500 text-white font-medium py-2 px-3 rounded-lg hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 has-tooltip relative" aria-label="Stop Stopwatch" tabindex="0">
                         Stop
                         <span class="tooltip">Stop the stopwatch</span>
                     </button>
-                    <button id="stopwatch-reset" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors focus:outline-none focus-outline has-tooltip" aria-label="Reset Stopwatch" tabindex="0">
-                        Reset
-                        <span class="tooltip">Reset the stopwatch</span>
-                    </button>
-                    <button id="stopwatch-lap" class="bg-purple-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-600 transition-colors focus:outline-none focus-outline has-tooltip" aria-label="Lap Stopwatch" tabindex="0">
+                    <button id="stopwatch-lap" class="flex-1 min-w-[70px] bg-purple-500 text-white font-medium py-2 px-3 rounded-lg hover:bg-purple-600 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 has-tooltip relative" aria-label="Lap Stopwatch" tabindex="0">
                         Lap
                         <span class="tooltip">Record a lap</span>
                     </button>
+                    <button id="stopwatch-reset" class="flex-1 min-w-[70px] bg-gray-500 text-white font-medium py-2 px-3 rounded-lg hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 has-tooltip relative" aria-label="Reset Stopwatch" tabindex="0">
+                        Reset
+                        <span class="tooltip">Reset the stopwatch</span>
+                    </button>
                 </div>
-                <ul id="stopwatch-laps" class="mt-4 text-left max-h-40 overflow-y-auto" aria-label="Stopwatch Laps"></ul>
+                <ul id="stopwatch-laps" class="mt-4 text-left max-h-40 overflow-y-auto p-2 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900" aria-label="Stopwatch Laps"></ul>
             </div>
 
-            <!-- Customization -->
             <div>
-                <h3 class="text-xl font-semibold mb-2" tabindex="0">Customization</h3>
-                <div class="mb-4">
-                    <label for="work-duration" class="block text-gray-700 text-sm font-bold mb-2">Work Duration (minutes):</label>
-                    <input type="number" id="work-duration" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus-outline" min="1" max="180" value="25" aria-label="Work Duration">
+                <h3 class="text-xl font-semibold mb-2 text-left border-t pt-4 dark:border-gray-700" tabindex="0">Settings</h3>
+                <div class="mb-4 text-left">
+                    <label for="work-duration" class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Work Duration (minutes):</label>
+                    <input type="number" id="work-duration" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600" min="1" max="180" value="25" aria-label="Work Duration">
                 </div>
-                <div class="mb-4">
-                    <label for="break-duration" class="block text-gray-700 text-sm font-bold mb-2">Break Duration (minutes):</label>
-                    <input type="number" id="break-duration" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus-outline" min="1" max="60" value="5" aria-label="Break Duration">
+                <div class="mb-4 text-left">
+                    <label for="break-duration" class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Break Duration (minutes):</label>
+                    <input type="number" id="break-duration" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600" min="1" max="60" value="5" aria-label="Break Duration">
                 </div>
-                <button id="save-settings" class="bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors focus:outline-none focus-outline has-tooltip" aria-label="Save Settings" tabindex="0">
+                <button id="save-settings" class="w-full bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400 has-tooltip relative" aria-label="Save Settings" tabindex="0">
                     Save Settings
                     <span class="tooltip">Save your custom durations</span>
                 </button>
-                <p id="settings-feedback" class="text-green-600 text-sm mt-2 hidden" aria-live="polite"></p>
+                <p id="settings-feedback" class="text-sm mt-2 hidden" aria-live="polite"></p>
             </div>
         </div>
 
-        <!-- Footer -->
         <footer class="mt-6 w-full max-w-md mx-auto" aria-label="Footer">
-            <p id="summary-display" class="text-lg text-gray-600 text-center mb-4" aria-live="polite">Today: 0 cycles, 0 min balanced</p>
-            <div id="session-log-container" class="bg-white p-4 rounded-lg shadow-inner">
-                <h3 class="text-md font-semibold text-gray-700 mb-2" tabindex="0">Today's Sessions</h3>
-                <ul id="session-log" class="text-sm text-gray-600 list-disc list-inside" aria-label="Session Log"></ul>
+            <div id="session-log-container" class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-2xl">
+                <p id="summary-display" class="text-lg font-bold text-gray-700 dark:text-gray-200 text-center mb-4" aria-live="polite">Today: 0 cycles, 0 min balanced</p>
+                <h3 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2 border-b pb-1" tabindex="0">Today's Sessions</h3>
+                <ul id="session-log" class="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1 max-h-40 overflow-y-auto" aria-label="Session Log"></ul>
+                <button id="reset-button" class="mt-4 w-full bg-red-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-red-600 transition-colors focus:outline-none text-sm focus:ring-2 focus:ring-red-400 has-tooltip relative" aria-label="Reset Session Data" tabindex="0">
+                    Reset Daily Data
+                    <span class="tooltip">Clear all today's session history</span>
+                </button>
             </div>
-            <button id="reset-button" class="mt-4 bg-red-500 text-white font-bold py-2 px-4 rounded-full shadow-lg hover:bg-red-600 transition-colors focus:outline-none text-sm focus-outline has-tooltip" aria-label="Reset Session Data" tabindex="0">
-                Reset Session Data
-                <span class="tooltip">Clear all today's data</span>
-            </button>
         </footer>
     </div>
 
     <script>
-        const state = {
-            mode: 'stopped', // 'stopped', 'work', 'break', 'paused'
-            timerId: null,
-            startTime: null,
-            elapsedSeconds: 0,
-            breakDuration: 0,
-            pausedTime: 0,
-            previousMode: null,
-        };
-
-        const stopwatchState = {
-            isRunning: false,
-            startTime: 0,
-            elapsedTime: 0,
-            timerInterval: null,
-            lapTimes: [],
+        // Use a single configuration object for better maintainability
+        const Config = {
+            WORK_DURATION_MIN: 25,
+            BREAK_DURATION_MIN: 5,
+            COLORS: {
+                work: { header: 'bg-blue-600', button: 'bg-blue-500 hover:bg-blue-600 focus:ring-blue-400', progress: 'bg-blue-500' },
+                break: { header: 'bg-green-600', button: 'bg-green-500 hover:bg-green-600 focus:ring-green-400', progress: 'bg-green-500' },
+                stopped: { header: 'bg-gray-500', button: 'bg-blue-500 hover:bg-blue-600 focus:ring-blue-400', progress: 'bg-blue-500' },
+                paused: { header: 'bg-yellow-500', button: 'bg-yellow-500 hover:bg-yellow-600 focus:ring-yellow-400', progress: 'bg-yellow-500' },
+            },
+            INTERVAL_MS: 50, // Update frequency for smooth UI (50ms for smooth clock hand and progress bar)
         };
 
         const ui = {
@@ -192,274 +202,62 @@
             saveSettingsButton: document.getElementById('save-settings'),
         };
 
-        const settings = {
-            colors: {
-                work: 'bg-blue-500',
-                break: 'bg-green-500',
-                stopped: 'bg-gray-400',
-                paused: 'bg-yellow-500',
-            },
-            buttonColors: {
-                work: 'bg-blue-500',
-                break: 'bg-green-500',
-                start: 'bg-blue-500',
-            },
-            progressBarColors: {
-                work: 'bg-blue-600',
-                break: 'bg-green-600',
-            }
+        // Initialize state, loaded from LocalStorage later
+        let TimerState = {
+            mode: 'stopped', // 'stopped', 'work', 'break', 'paused'
+            timerId: null,
+            targetEndTime: 0, // The timestamp when the current session should end
+            pausedDuration: 0, // Time to subtract when resuming
+            previousMode: null,
         };
 
-        let dailySummary = {
+        let StopwatchState = {
+            isRunning: false,
+            startTime: 0,
+            elapsedTime: 0,
+            timerInterval: null,
+            lapTimes: [],
+        };
+
+        let DailySummary = {
             date: new Date().toLocaleDateString(),
             cycles: 0,
             totalMinutes: 0,
             sessions: [],
         };
 
-        // --- Core Logic ---
-
-        function startTimer() {
-            state.startTime = Date.now() - state.elapsedSeconds * 1000;
-            state.timerId = setInterval(updateTimer, 50);
-            ui.pauseButton.classList.remove('hidden');
-            ui.pauseButton.textContent = 'Pause';
-        }
-
-        function stopTimer() {
-            clearInterval(state.timerId);
-            state.timerId = null;
-        }
-
-        function updateTimer() {
-            saveState();
-            const now = Date.now();
-            const elapsedMilliseconds = Math.max(0, now - state.startTime);
-            state.elapsedSeconds = Math.floor(elapsedMilliseconds / 1000);
-            ui.elapsedTime.textContent = formatTime(elapsedMilliseconds, true);
-
-            const seconds = new Date().getSeconds();
-            const secondsDegrees = ((seconds / 60) * 360) + 90; // offset by 90 degrees
-            ui.secondHand.style.transform = `rotate(${secondsDegrees}deg)`;
-
-            if (state.mode === 'work') {
-                const workDurationSeconds = parseInt(localStorage.getItem('workDuration') || 25) * 60;
-                const progress = Math.min(100, (state.elapsedSeconds / workDurationSeconds) * 100);
-                ui.progressBar.style.width = `${progress}%`;
-                ui.progressBar.className = `h-2.5 rounded-full ${settings.progressBarColors.work}`;
-                ui.remainingTime.textContent = formatTime(Math.max(0, (workDurationSeconds - state.elapsedSeconds) * 1000), true);
-                if (state.elapsedSeconds >= workDurationSeconds) {
-                    handleSessionEnd();
-                }
-            } else if (state.mode === 'break') {
-                const remaining = Math.max(0, state.breakDuration * 1000 - elapsedMilliseconds);
-                ui.remainingTime.textContent = formatTime(remaining, true);
-                const progress = Math.min(100, (elapsedMilliseconds / (state.breakDuration * 1000)) * 100);
-                ui.progressBar.style.width = `${progress}%`;
-                ui.progressBar.className = `h-2.5 rounded-full ${settings.progressBarColors.break}`;
-                if (remaining <= 0) {
-                    handleSessionEnd();
-                }
-            }
-        }
-
-        function handleSessionEnd() {
-            stopTimer();
-            playChime();
-            const sessionDuration = Math.round(state.elapsedSeconds / 60);
-            if (state.mode === 'work') {
-                dailySummary.cycles++;
-                dailySummary.totalMinutes += sessionDuration;
-                dailySummary.sessions.push({ type: 'Work', duration: sessionDuration });
-                updateSummary();
-                saveSummary();
-                state.breakDuration = parseInt(localStorage.getItem('breakDuration') || 5) * 60; // Use customized break duration
-                notifyUser("Work session complete. Break started.");
-                switchMode('break');
-            } else if (state.mode === 'break') {
-                dailySummary.sessions.push({ type: 'Break', duration: sessionDuration });
-                updateSummary();
-                saveSummary();
-                notifyUser("Break's over! Time to get back to work.");
-                switchMode('work');
-            }
-            localStorage.removeItem('appState');
-        }
-
-        function switchMode(newMode) {
-            state.elapsedSeconds = 0;
-            state.pausedTime = 0;
-            ui.elapsedTime.textContent = formatTime(0, true);
-
-            if (newMode === 'work') {
-                state.mode = 'work';
-                state.previousMode = 'work';
-                ui.modeDisplay.textContent = 'WORK';
-                ui.remainingTime.textContent = 'N/A';
-                ui.mainButton.textContent = 'End Work, Start Break';
-                ui.mainButton.setAttribute('aria-pressed', 'true');
-                updateColors('work');
-                ui.progressBarContainer.classList.remove('hidden');
-                startTimer();
-            } else if (newMode === 'break') {
-                state.mode = 'break';
-                state.previousMode = 'break';
-                ui.modeDisplay.textContent = 'BREAK';
-                ui.mainButton.textContent = 'End Break, Start Work';
-                ui.mainButton.setAttribute('aria-pressed', 'true');
-                updateColors('break');
-                ui.progressBarContainer.classList.remove('hidden');
-                startTimer();
-            } else if (newMode === 'stopped') {
-                state.mode = 'stopped';
-                state.previousMode = null;
-                ui.modeDisplay.textContent = 'Tap to Start Work';
-                ui.remainingTime.textContent = 'N/A';
-                ui.mainButton.textContent = 'Start Work';
-                ui.mainButton.setAttribute('aria-pressed', 'false');
-                ui.pauseButton.classList.add('hidden');
-                updateColors('stopped');
-                ui.progressBarContainer.classList.add('hidden');
-            }
-        }
-
-        // --- UI & Event Handlers ---
-
-        function updateColors(mode) {
-            const baseHeader = `p-6 transition-colors rounded-t-lg`;
-            if (mode === 'work') {
-                ui.header.className = `${baseHeader} ${settings.colors.work}`;
-                ui.mainButton.className = `bg-blue-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75`;
-            } else if (mode === 'break') {
-                ui.header.className = `${baseHeader} ${settings.colors.break}`;
-                ui.mainButton.className = `bg-green-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-green-600 transition-all focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75`;
-            } else if (mode === 'paused') {
-                ui.header.className = `${baseHeader} ${settings.colors.paused}`;
-                const previous = state.previousMode || 'work';
-                if (previous === 'break') {
-                    ui.mainButton.className = `bg-green-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-green-600 transition-all focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75`;
-                } else {
-                    ui.mainButton.className = `bg-blue-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75`;
-                }
-            } else {
-                ui.header.className = `${baseHeader} ${settings.colors.stopped}`;
-                ui.mainButton.className = `bg-blue-500 text-white text-base font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75`;
-            }
-            // Reset progress bar when mode changes
-            ui.progressBar.style.width = '0%';
-            ui.progressBar.className = `h-2.5 rounded-full`; // Clear previous color
-        }
-
-        function updateLocalTime() {
-            const now = new Date();
-            ui.localTime.textContent = now.toLocaleTimeString();
-        }
-
-        // Call updateLocalTime every second
-        setInterval(updateLocalTime, 1000);
-
-        // --- Stopwatch Functions ---
-        function startStopwatch() {
-            if (!stopwatchState.isRunning) {
-                stopwatchState.startTime = Date.now() - stopwatchState.elapsedTime;
-                stopwatchState.timerInterval = setInterval(updateStopwatchDisplay, 10);
-                stopwatchState.isRunning = true;
-            }
-        }
-
-        function stopStopwatch() {
-            clearInterval(stopwatchState.timerInterval);
-            stopwatchState.isRunning = false;
-        }
-
-        function resetStopwatch() {
-            stopStopwatch();
-            stopwatchState.elapsedTime = 0;
-            stopwatchState.lapTimes = [];
-            updateStopwatchDisplay();
-            ui.stopwatchLaps.innerHTML = '';
-        }
-
-        function lapStopwatch() {
-            if (stopwatchState.isRunning) {
-                const lapTime = stopwatchState.elapsedTime;
-                stopwatchState.lapTimes.push(lapTime);
-                const li = document.createElement('li');
-                li.textContent = `Lap ${stopwatchState.lapTimes.length}: ${formatTime(lapTime, true)}`;
-                li.setAttribute('tabindex', '0');
-                ui.stopwatchLaps.appendChild(li);
-                ui.stopwatchLaps.scrollTop = ui.stopwatchLaps.scrollHeight;
-            }
-        }
-
-        function updateStopwatchDisplay() {
-            stopwatchState.elapsedTime = Date.now() - stopwatchState.startTime;
-            ui.stopwatchDisplay.textContent = formatTime(stopwatchState.elapsedTime, true);
-        }
-
-        ui.mainButton.addEventListener('click', () => {
-            if (state.mode === 'stopped') {
-                switchMode('work');
-            } else {
-                handleSessionEnd();
-            }
-        });
-
-        ui.pauseButton.addEventListener('click', () => {
-            if (state.mode === 'paused') {
-                state.mode = state.previousMode || 'work'; // Resume to the previous mode
-                ui.pauseButton.textContent = 'Pause';
-                state.startTime = Date.now() - state.pausedTime;
-                startTimer();
-                updateColors(state.mode);
-                ui.modeDisplay.textContent = state.mode.toUpperCase();
-            } else if (state.mode === 'work' || state.mode === 'break') {
-                state.previousMode = state.mode;
-                state.pausedTime = state.elapsedSeconds * 1000;
-                stopTimer();
-                state.mode = 'paused';
-                ui.pauseButton.textContent = 'Resume';
-                updateColors('paused');
-                ui.modeDisplay.textContent = 'PAUSED';
-            }
-        });
-
-        ui.resetButton.addEventListener('click', () => {
-            if (confirm('Are you sure you want to reset all session data?')) {
-                resetSessionData();
-            }
-        });
-        
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                e.preventDefault();
-                ui.mainButton.click();
-            }
-        });
-
-        // --- Stopwatch Event Listeners ---
-        ui.stopwatchStart.addEventListener('click', startStopwatch);
-        ui.stopwatchStop.addEventListener('click', stopStopwatch);
-        ui.stopwatchReset.addEventListener('click', resetStopwatch);
-        ui.stopwatchLap.addEventListener('click', lapStopwatch);
-
-        // --- Customization Event Listener ---
-        ui.saveSettingsButton.addEventListener('click', saveSettings);
-
         // --- Utility Functions ---
 
-        function formatTime(milliseconds, showMilliseconds = false) {
-            const totalSeconds = Math.floor(milliseconds / 1000);
-            const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
-            const secs = (totalSeconds % 60).toString().padStart(2, '0');
-            if (showMilliseconds) {
-                const ms = Math.floor(milliseconds % 1000).toString().padStart(3, '0');
-                return `${mins}:${secs}:${ms}`;
+        /**
+         * Formats milliseconds into HH:MM:SS or MM:SS:mmm
+         * @param {number} ms - Milliseconds
+         * @param {boolean} showMs - Whether to show milliseconds (for stopwatch)
+         * @returns {string} Formatted time string
+         */
+        function formatTime(ms, showMs = false) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const mins = Math.floor((totalSeconds % 3600) / 60);
+            const secs = totalSeconds % 60;
+            
+            const paddedMins = mins.toString().padStart(2, '0');
+            const paddedSecs = secs.toString().padStart(2, '0');
+
+            if (showMs) {
+                const milliseconds = Math.floor(ms % 1000).toString().padStart(3, '0');
+                if (hours > 0) {
+                    const paddedHours = hours.toString().padStart(2, '0');
+                    return `${paddedHours}:${paddedMins}:${paddedSecs}.${milliseconds}`;
+                }
+                return `${paddedMins}:${paddedSecs}.${milliseconds}`;
             } else {
-                return `${mins}:${secs}`;
+                return hours > 0 
+                    ? `${hours.toString().padStart(2, '0')}:${paddedMins}:${paddedSecs}`
+                    : `${paddedMins}:${paddedSecs}`;
             }
         }
-
+        
+        // Simple AudioContext chime
         function playChime() {
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -468,86 +266,351 @@
                 oscillator.connect(gainNode);
                 gainNode.connect(audioContext.destination);
                 oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 note
+                oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
                 gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 1);
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + 0.5);
             } catch (e) {
-                console.error("Web Audio API is not supported in this browser.", e);
+                console.error("Web Audio API is not supported or was blocked.", e);
             }
         }
 
+        // Notification Helper
         function notifyUser(message) {
-            try {
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('Work-Break Balance', { body: message });
-                } else {
-                    alert(message);
-                }
-            } catch (e) {
-                alert(message);
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Work-Break Balance', { body: message, icon: 'icon-192.png' });
+            } else if (Notification.permission === 'default') {
+                // Request permission, but don't notify now to avoid spam
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        new Notification('Work-Break Balance', { body: message, icon: 'icon-192.png' });
+                    }
+                });
             }
         }
+
+
+        // --- UI Update & Theme ---
+
+        function updateColors(mode) {
+            const colors = Config.COLORS[mode];
+            const baseHeader = `p-6 transition-colors rounded-t-xl shadow-xl`;
+            
+            // Update Header Color
+            // Remove all bg-* classes from header except those needed for structure
+            ui.header.className = baseHeader + ' ' + colors.header;
+
+            // Update Main Button Color & Ring
+            const mainButtonBase = 'text-white text-lg font-semibold py-3 px-10 rounded-xl shadow-lg transition-all focus:outline-none focus:ring-4 focus:ring-opacity-50 has-tooltip relative';
+            // Dynamically set hover/focus styles based on the mode's button configuration
+            ui.mainButton.className = mainButtonBase + ' ' + colors.button;
+
+            // Update Progress Bar Color
+            ui.progressBar.className = `h-full rounded-full transition-all duration-1000 ease-linear ${colors.progress}`;
+            
+            // Update Clock Hand Color
+            ui.secondHand.setAttribute('stroke', mode === 'stopped' ? '#F59E0B' : 'white');
+        }
+
+        function updateLocalTime() {
+            const now = new Date();
+            ui.localTime.textContent = now.toLocaleTimeString();
+
+            // Update analog clock second hand
+            const seconds = now.getSeconds();
+            const milliseconds = now.getMilliseconds();
+            // Total time in seconds, including fraction
+            const totalSeconds = seconds + milliseconds / 1000;
+            // Calculate degrees (0 degrees is 12 o'clock, 90 degrees is 3 o'clock in this SVG setup, so we rotate 90 degrees to start at 12)
+            const secondsDegrees = (totalSeconds / 60) * 360 - 90; 
+            ui.secondHand.style.transform = `rotate(${secondsDegrees}deg)`;
+        }
+        
+        // Called every 1000ms
+        setInterval(updateLocalTime, 100);
+
+        // --- Core Timer Logic ---
+
+        function startTimer() {
+            if (TimerState.timerId) stopTimer();
+
+            // The update interval runs frequently for smooth UI, but logic relies on targetEndTime
+            TimerState.timerId = setInterval(updateTimerUI, Config.INTERVAL_MS);
+            
+            ui.pauseButton.classList.remove('hidden');
+            ui.pauseButton.textContent = 'Pause';
+            ui.pauseButton.setAttribute('aria-pressed', 'false');
+            ui.mainButton.setAttribute('aria-pressed', 'true');
+        }
+
+        function stopTimer() {
+            if (TimerState.timerId) {
+                clearInterval(TimerState.timerId);
+                TimerState.timerId = null;
+            }
+        }
+        
+        // This function handles UI updates and checks for session end
+        function updateTimerUI() {
+            saveState();
+
+            const now = Date.now();
+            let remainingMs = Math.max(0, TimerState.targetEndTime - now);
+            let elapsedMs = TimerState.targetEndTime - now > 0 
+                ? (TimerState.targetEndTime - TimerState.totalDurationMs) + TimerState.totalDurationMs - remainingMs
+                : TimerState.totalDurationMs; // Once done, elapsed equals total duration
+
+            TimerState.elapsedMs = elapsedMs; // Store elapsed time in state for robustness
+            
+            ui.elapsedTime.textContent = formatTime(elapsedMs);
+
+            const progress = TimerState.totalDurationMs > 0 
+                ? Math.min(100, (elapsedMs / TimerState.totalDurationMs) * 100)
+                : 0;
+            
+            // Update UI based on time
+            ui.remainingTime.textContent = formatTime(remainingMs);
+            ui.progressBar.style.width = `${progress}%`;
+            
+            if (remainingMs <= 0 && TimerState.mode !== 'stopped' && TimerState.mode !== 'paused') {
+                handleSessionEnd();
+            }
+        }
+
+        function handleSessionEnd() {
+            stopTimer();
+            playChime();
+            
+            const sessionDuration = Math.round(TimerState.totalDurationMs / (1000 * 60)); // Duration in minutes
+
+            // Ensure the session is logged with the intended duration
+            if (TimerState.mode === 'work') {
+                DailySummary.cycles++;
+                DailySummary.totalMinutes += sessionDuration;
+                DailySummary.sessions.push({ type: 'Work', duration: sessionDuration, timestamp: Date.now() });
+                notifyUser("Work session complete. Break started.");
+                switchMode('break');
+            } else if (TimerState.mode === 'break') {
+                DailySummary.sessions.push({ type: 'Break', duration: sessionDuration, timestamp: Date.now() });
+                notifyUser("Break's over! Time to get back to work.");
+                switchMode('work'); // Auto-start the next work session
+            }
+            
+            updateSummary();
+            saveSummary();
+        }
+
+        function switchMode(newMode) {
+            stopTimer(); // Always stop the old interval
+            
+            const workDurationMinutes = parseInt(localStorage.getItem('workDuration') || Config.WORK_DURATION_MIN);
+            const breakDurationMinutes = parseInt(localStorage.getItem('breakDuration') || Config.BREAK_DURATION_MIN);
+            
+            // Reset and configure new session
+            TimerState.mode = newMode;
+            TimerState.pausedDuration = 0;
+            TimerState.elapsedMs = 0;
+            
+            ui.elapsedTime.textContent = formatTime(0);
+
+            if (newMode === 'work') {
+                const totalMs = workDurationMinutes * 60 * 1000;
+                TimerState.totalDurationMs = totalMs;
+                TimerState.targetEndTime = Date.now() + totalMs;
+                TimerState.previousMode = 'work';
+                ui.modeDisplay.textContent = 'WORK TIME';
+                ui.mainButton.textContent = 'End Work, Start Break';
+                ui.progressBarContainer.classList.remove('hidden');
+                updateColors('work');
+                startTimer();
+            } else if (newMode === 'break') {
+                const totalMs = breakDurationMinutes * 60 * 1000;
+                TimerState.totalDurationMs = totalMs;
+                TimerState.targetEndTime = Date.now() + totalMs;
+                TimerState.previousMode = 'break';
+                ui.modeDisplay.textContent = 'BREAK TIME';
+                ui.mainButton.textContent = 'End Break, Start Work';
+                ui.progressBarContainer.classList.remove('hidden');
+                updateColors('break');
+                startTimer();
+            } else if (newMode === 'stopped') {
+                TimerState.previousMode = null;
+                TimerState.totalDurationMs = 0;
+                ui.modeDisplay.textContent = 'Tap to Start Work';
+                ui.remainingTime.textContent = 'N/A';
+                ui.mainButton.textContent = 'Start Work';
+                ui.mainButton.setAttribute('aria-pressed', 'false');
+                ui.pauseButton.classList.add('hidden');
+                ui.progressBarContainer.classList.add('hidden');
+                ui.progressBar.style.width = '0%';
+                updateColors('stopped');
+                localStorage.removeItem('appState'); // Clear state on clean stop
+            }
+        }
+
+        function toggleMainTimer() {
+            if (TimerState.mode === 'stopped') {
+                switchMode('work');
+            } else if (TimerState.mode === 'paused') {
+                togglePause(); // If paused, resume
+            } else {
+                handleSessionEnd(); // If running, stop and move to next (or just stop)
+            }
+        }
+        
+        function togglePause() {
+            if (TimerState.mode === 'paused') {
+                // RESUME
+                TimerState.mode = TimerState.previousMode;
+                
+                // Recalculate target end time by subtracting the paused duration
+                TimerState.targetEndTime = Date.now() + (TimerState.targetEndTime - (Date.now() - TimerState.pausedStartTime));
+                TimerState.pausedStartTime = 0;
+
+                ui.pauseButton.textContent = 'Pause';
+                ui.pauseButton.setAttribute('aria-pressed', 'false');
+                ui.modeDisplay.textContent = TimerState.mode.toUpperCase() + ' TIME';
+                updateColors(TimerState.mode);
+                startTimer();
+            } else if (TimerState.mode === 'work' || TimerState.mode === 'break') {
+                // PAUSE
+                stopTimer();
+                
+                TimerState.previousMode = TimerState.mode;
+                TimerState.mode = 'paused';
+                TimerState.pausedStartTime = Date.now(); // Record when pause started
+
+                ui.pauseButton.textContent = 'Resume';
+                ui.pauseButton.setAttribute('aria-pressed', 'true');
+                ui.modeDisplay.textContent = 'PAUSED';
+                ui.remainingTime.textContent = formatTime(TimerState.targetEndTime - Date.now()); // Show remaining time before pause
+                updateColors('paused');
+            }
+        }
+
+
+        // --- Stopwatch Module (Stopwatch.js) ---
+
+        const Stopwatch = {
+            start: () => {
+                if (!StopwatchState.isRunning) {
+                    StopwatchState.startTime = Date.now() - StopwatchState.elapsedTime;
+                    StopwatchState.timerInterval = setInterval(Stopwatch.updateDisplay, 10);
+                    StopwatchState.isRunning = true;
+                    ui.stopwatchStart.disabled = true;
+                    ui.stopwatchStop.disabled = false;
+                    ui.stopwatchLap.disabled = false;
+                }
+            },
+            stop: () => {
+                if (StopwatchState.isRunning) {
+                    clearInterval(StopwatchState.timerInterval);
+                    StopwatchState.isRunning = false;
+                    StopwatchState.elapsedTime = Date.now() - StopwatchState.startTime; // Capture final time
+                    ui.stopwatchStart.disabled = false;
+                    ui.stopwatchStop.disabled = true;
+                }
+            },
+            reset: () => {
+                Stopwatch.stop();
+                StopwatchState.elapsedTime = 0;
+                StopwatchState.lapTimes = [];
+                Stopwatch.updateDisplay();
+                ui.stopwatchLaps.innerHTML = '<li tabindex="0" class="text-gray-400 dark:text-gray-600">No laps recorded.</li>';
+                ui.stopwatchStart.disabled = false;
+                ui.stopwatchStop.disabled = true;
+                ui.stopwatchLap.disabled = true;
+            },
+            lap: () => {
+                if (StopwatchState.isRunning) {
+                    const currentTime = Date.now() - StopwatchState.startTime;
+                    const lastLapTime = StopwatchState.lapTimes.length > 0 ? StopwatchState.lapTimes[StopwatchState.lapTimes.length - 1].total : 0;
+                    const lapDuration = currentTime - lastLapTime;
+
+                    StopwatchState.lapTimes.push({ total: currentTime, duration: lapDuration });
+                    
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between font-mono py-0.5 border-b border-gray-100 dark:border-gray-700 last:border-b-0';
+                    li.textContent = `Lap ${StopwatchState.lapTimes.length}: ${formatTime(lapDuration, true)}`;
+                    
+                    // Add total time for better lap log
+                    const span = document.createElement('span');
+                    span.className = 'text-gray-500 dark:text-gray-400';
+                    span.textContent = `(Total: ${formatTime(currentTime, true)})`;
+
+                    li.innerHTML = `Lap ${StopwatchState.lapTimes.length}: <strong class="text-gray-900 dark:text-gray-100">${formatTime(lapDuration, true)}</strong> <span class="text-xs ml-2 text-gray-500 dark:text-gray-400">(${formatTime(currentTime, true)})</span>`;
+                    
+                    ui.stopwatchLaps.prepend(li); // Add to the top
+                    ui.stopwatchLaps.scrollTop = 0;
+                }
+            },
+            updateDisplay: () => {
+                StopwatchState.elapsedTime = Date.now() - StopwatchState.startTime;
+                ui.stopwatchDisplay.textContent = formatTime(StopwatchState.elapsedTime, true);
+            }
+        };
+
+
+        // --- LocalStorage & Initialization ---
 
         function saveState() {
-            localStorage.setItem('appState', JSON.stringify(state));
-        }
-
-        function resetSessionData() {
-            localStorage.removeItem('appState');
-            localStorage.removeItem('dailySummary');
-            dailySummary = {
-                date: new Date().toLocaleDateString(),
-                cycles: 0,
-                totalMinutes: 0,
-                sessions: [],
-            };
-            stopTimer();
-            switchMode('stopped');
-            updateSummary();
+            // Save essential state variables for recovery
+            localStorage.setItem('appState', JSON.stringify({
+                mode: TimerState.mode,
+                targetEndTime: TimerState.targetEndTime,
+                previousMode: TimerState.previousMode,
+                pausedStartTime: TimerState.pausedStartTime || 0,
+                totalDurationMs: TimerState.totalDurationMs || 0,
+            }));
         }
 
         function loadState() {
             const savedState = localStorage.getItem('appState');
-            if (savedState) {
-                const restoredState = JSON.parse(savedState);
-                const today = new Date().toLocaleDateString();
-                // If there is no startTime (e.g., paused/stopped) or it's from today, restore; otherwise, discard
-                if (!restoredState.startTime || new Date(restoredState.startTime).toLocaleDateString() === today) {
-                    Object.assign(state, restoredState);
-                    if (state.mode === 'work' || state.mode === 'break') {
-                        updateColors(state.mode);
-                        ui.modeDisplay.textContent = state.mode.toUpperCase();
-                        ui.mainButton.textContent = state.mode === 'work' ? 'End Work, Start Break' : 'End Break, Start Work';
-                        ui.mainButton.setAttribute('aria-pressed', 'true');
-                        ui.elapsedTime.textContent = formatTime(state.elapsedSeconds * 1000, true);
-                        if (state.mode === 'break') {
-                            ui.remainingTime.textContent = formatTime(Math.max(0, state.breakDuration * 1000 - state.elapsedSeconds * 1000), true);
-                        } else if (state.mode === 'work') {
-                            const workDurationSeconds = parseInt(localStorage.getItem('workDuration') || 25) * 60;
-                            ui.remainingTime.textContent = formatTime(Math.max(0, (workDurationSeconds - state.elapsedSeconds) * 1000), true);
-                        }
-                        startTimer();
-                    } else if (state.mode === 'paused') {
-                        updateColors('paused');
-                        ui.modeDisplay.textContent = 'PAUSED';
-                        ui.pauseButton.textContent = 'Resume';
-                        ui.pauseButton.classList.remove('hidden');
-                        // reflect the intended action label based on previous mode
-                        ui.mainButton.textContent = (state.previousMode === 'break') ? 'End Break, Start Work' : 'End Work, Start Break';
-                        ui.mainButton.setAttribute('aria-pressed', 'true');
+            if (!savedState) return;
+            
+            const restoredState = JSON.parse(savedState);
+            const today = new Date().toLocaleDateString();
+
+            // Check if state is relevant for today
+            if (new Date(restoredState.targetEndTime).toLocaleDateString() === today || restoredState.mode === 'paused') {
+                Object.assign(TimerState, restoredState);
+                
+                // If the session was running
+                if (TimerState.mode === 'work' || TimerState.mode === 'break') {
+                    // Check if time has already passed
+                    if (TimerState.targetEndTime < Date.now()) {
+                        handleSessionEnd(); // Finish the session if time ran out while app was closed
+                        return;
                     }
-                } else {
-                    localStorage.removeItem('appState');
+                    // Restore UI and restart timer
+                    const mode = TimerState.mode;
+                    const durationText = mode === 'work' ? 'End Work, Start Break' : 'End Break, Start Work';
+
+                    updateColors(mode);
+                    ui.modeDisplay.textContent = mode.toUpperCase() + ' TIME';
+                    ui.mainButton.textContent = durationText;
+                    ui.progressBarContainer.classList.remove('hidden');
+                    startTimer(); // The updateTimerUI handles the rest of the time update
+                } else if (TimerState.mode === 'paused') {
+                    // Restore PAUSED state
+                    togglePause(); // Will switch state.mode back to 'paused' and update UI
+                    ui.modeDisplay.textContent = 'PAUSED';
+                    ui.pauseButton.textContent = 'Resume';
+                    ui.pauseButton.classList.remove('hidden');
+                    
+                    const durationText = TimerState.previousMode === 'work' ? 'End Work, Start Break' : 'End Break, Start Work';
+                    ui.mainButton.textContent = durationText;
+                    ui.mainButton.setAttribute('aria-pressed', 'true');
+                    updateColors('paused');
                 }
+            } else {
+                localStorage.removeItem('appState'); // Discard old day's state
             }
         }
-
-        // --- LocalStorage & Initialization ---
-
+        
         function saveSummary() {
-            localStorage.setItem('dailySummary', JSON.stringify(dailySummary));
+            localStorage.setItem('dailySummary', JSON.stringify(DailySummary));
         }
 
         function loadSummary() {
@@ -556,80 +619,68 @@
             if (saved) {
                 const parsed = JSON.parse(saved);
                 if (parsed.date === today) {
-                    dailySummary = parsed;
+                    DailySummary = parsed;
                 } else {
-                    // It's a new day, reset summary
-                    saveSummary(); 
+                    // It's a new day, keep the new default summary, but save it to start fresh
+                    saveSummary();
                 }
             }
             updateSummary();
         }
 
         function updateSummary() {
-            ui.summaryDisplay.textContent = `Today: ${dailySummary.cycles} cycles, ${dailySummary.totalMinutes} min balanced`;
+            ui.summaryDisplay.textContent = `Today: ${DailySummary.cycles} cycles, ${DailySummary.totalMinutes} min balanced`;
             ui.sessionLog.innerHTML = '';
-            if (dailySummary.sessions.length === 0) {
+            if (DailySummary.sessions.length === 0) {
                 const li = document.createElement('li');
+                li.className = 'text-gray-400 dark:text-gray-600';
                 li.textContent = 'No sessions yet.';
                 li.setAttribute('tabindex', '0');
                 ui.sessionLog.appendChild(li);
             } else {
-                dailySummary.sessions.forEach(session => {
+                DailySummary.sessions.reverse().forEach(session => {
                     const li = document.createElement('li');
+                    li.className = session.type === 'Work' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400';
                     li.textContent = `${session.type}: ${session.duration} min`;
                     li.setAttribute('tabindex', '0');
                     ui.sessionLog.appendChild(li);
                 });
+                DailySummary.sessions.reverse(); // Restore original order
             }
         }
 
-        // --- PWA Service Worker ---
-        
-        function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('service-worker.js')
-                        .then(registration => {
-                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                        })
-                        .catch(err => {
-                            console.log('ServiceWorker registration failed: ', err);
-                        });
-                });
-            }
+        function resetSessionData() {
+            localStorage.removeItem('appState');
+            localStorage.removeItem('dailySummary');
+            DailySummary = {
+                date: new Date().toLocaleDateString(),
+                cycles: 0,
+                totalMinutes: 0,
+                sessions: [],
+            };
+            stopTimer();
+            switchMode('stopped');
+            updateSummary();
+            notifyUser("All session data reset.");
         }
 
-        // --- Initial Load ---
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            loadSummary();
-            loadState();
-            loadSettings(); // Load customization settings
-            if (state.mode === 'stopped') {
-                switchMode('stopped');
-            }
-            ui.progressBarContainer.classList.add('hidden'); // Ensure hidden on initial load
-            registerServiceWorker();
-            updateLocalTime(); // Initial call to display time immediately
-            if ('Notification' in window && Notification.permission === 'default') {
-                try { Notification.requestPermission(); } catch (_) {}
-            }
-        });
-
-        // --- Customization: Save and Load Settings ---
         function saveSettings() {
             const work = parseInt(ui.workDurationInput.value, 10);
             const brk = parseInt(ui.breakDurationInput.value, 10);
+            
+            // Validation
             if (isNaN(work) || work < 1 || work > 180) {
-                showSettingsFeedback('Work duration must be between 1 and 180 minutes.', true);
+                showSettingsFeedback('Work duration must be 1-180 minutes.', true);
                 ui.workDurationInput.focus();
                 return;
             }
             if (isNaN(brk) || brk < 1 || brk > 60) {
-                showSettingsFeedback('Break duration must be between 1 and 60 minutes.', true);
+                showSettingsFeedback('Break duration must be 1-60 minutes.', true);
                 ui.breakDurationInput.focus();
                 return;
             }
+            
+            // Save and provide feedback
             localStorage.setItem('workDuration', work);
             localStorage.setItem('breakDuration', brk);
             showSettingsFeedback('Settings saved!', false);
@@ -648,17 +699,81 @@
             el.classList.toggle('text-green-600', !isError);
             el.classList.toggle('text-red-600', isError);
             el.classList.remove('hidden');
-            setTimeout(() => el.classList.add('hidden'), 2000);
+            setTimeout(() => el.classList.add('hidden'), 2500);
         }
 
-        // --- Accessibility: Keyboard Navigation for Buttons ---
+        // --- Event Listeners & Initialization ---
+        
+        // Timer
+        ui.mainButton.addEventListener('click', toggleMainTimer);
+        ui.pauseButton.addEventListener('click', togglePause);
+        ui.resetButton.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear ALL of today\'s session data? This cannot be undone.')) {
+                resetSessionData();
+            }
+        });
+        
+        // Stopwatch
+        ui.stopwatchStart.addEventListener('click', Stopwatch.start);
+        ui.stopwatchStop.addEventListener('click', Stopwatch.stop);
+        ui.stopwatchReset.addEventListener('click', Stopwatch.reset);
+        ui.stopwatchLap.addEventListener('click', Stopwatch.lap);
+        
+        // Settings
+        ui.saveSettingsButton.addEventListener('click', saveSettings);
+        
+        // Global Keyboard Shortcut (Spacebar)
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && (e.target.tagName !== 'INPUT' || e.target.type !== 'number')) {
+                e.preventDefault();
+                toggleMainTimer();
+            }
+        });
+
+        // Accessibility: Allow 'Enter' key press on buttons/tabindex elements
         document.querySelectorAll('button, [tabindex="0"]').forEach(el => {
             el.addEventListener('keydown', e => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === 'Enter') {
                     e.preventDefault();
                     el.click();
                 }
             });
+        });
+
+        // PWA Service Worker (Keep this simple registration)
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('service-worker.js')
+                        .then(registration => console.log('ServiceWorker registration successful.', registration.scope))
+                        .catch(err => console.log('ServiceWorker registration failed:', err));
+                });
+            }
+        }
+        
+        // Initializer
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSummary();
+            loadSettings();
+            loadState(); // Load state last as it may start the timer
+            
+            // Set initial stopwatch state
+            Stopwatch.reset();
+
+            // Set initial timer UI if state wasn't loaded (default 'stopped')
+            if (TimerState.mode === 'stopped') {
+                switchMode('stopped');
+            }
+
+            // Ensure local time is shown immediately
+            updateLocalTime();
+            
+            // Request Notification Permission on load
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+            
+            registerServiceWorker();
         });
     </script>
 </body>
